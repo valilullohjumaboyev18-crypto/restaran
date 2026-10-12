@@ -1,0 +1,21 @@
+{% load static %}
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111827">
+  <title>{% block title %}Mazali — Restoran menyusi{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{% url 'orders:menu' %}"><span class="brand-mark">M</span><span>MAZALI<small>RESTORAN</small></span></a>
+    <a class="admin-link" href="/admin/">Admin panel</a>
+  </header>
+  <main>{% block content %}{% endblock %}</main>
+  <footer class="footer">Mazali Restoran · Yoqimli ishtaha!</footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

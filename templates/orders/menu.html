@@ -1,0 +1,138 @@
+{% extends "orders/base.html" %}
+{% block title %}Menyu — Mazali Restoran{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <span class="eyebrow">YANGI TA’M • YAXSHI KAYFIYAT</span>
+    <h1>Bugun nima<br><em>tanlaysiz?</em></h1>
+    <p>Menyuni ko‘ring, yoqtirgan taomlaringizni savatga qo‘shing va buyurtma bering.</p>
+  </div>
+  <div class="hero-art" aria-hidden="true"><div class="plate"><span>✦</span>🍲</div><div class="art-tag">Fresh & tasty</div></div>
+</section>
+<div class="menu-layout">
+  <section class="menu-main">
+    <div class="section-heading"><div><span class="eyebrow">BIZNING MENYU</span><h2>Taomlar</h2></div><label class="searchbox"><span>⌕</span><input id="search" type="search" placeholder="Taom qidirish..."></label></div>
+    {% if not items %}
+      <div class="empty-state"><div>🍽️</div><h3>Menyu hozircha bo‘sh</h3><p>Admin panelga kirib kategoriya va taomlar qo‘shing.</p><a class="button button-dark" href="/admin/">Admin panelni ochish</a></div>
+    {% else %}
+      {% for category in categories %}
+        {% with category_items=category.items.all %}
+        {% if category_items %}
+        <section class="category-section">
+          <h3 class="category-title">{{ category.name }}</h3>
+          <div class="food-grid">
+            {% for item in category_items %}
+              {% if item.is_available %}
+              <article class="food-card" data-name="{{ item.name|lower }}" data-description="{{ item.description|lower }}">
+                {% if item.image %}<img class="food-image" src="{{ item.image.url }}" alt="{{ item.name }}" loading="lazy">{% else %}<div class="food-image food-placeholder"><span>🍽️</span></div>{% endif %}
+                <div class="food-info"><h4>{{ item.name }}</h4><p>{{ item.description|default:"Mazali, yangi tayyorlangan taom." }}</p><div class="food-bottom"><strong>{{ item.price|floatformat:0 }} so‘m</strong><button class="add-btn" type="button" data-id="{{ item.id }}" data-name="{{ item.name }}" data-price="{{ item.price }}">+</button></div></div>
+              </article>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </section>
+        {% endif %}
+        {% endwith %}
+      {% endfor %}
+    {% endif %}
+  </section>
+  <aside class="cart-panel">
+    <div class="cart-title"><div><span class="eyebrow">SIZNING TANLOVINGIZ</span><h2>Savat <span id="cart-count" class="count">0</span></h2></div><span class="cart-icon">🛍</span></div>
+    <label class="field-label" for="table-number">Stol raqami *</label>
+    <select id="table-number" class="field"><option value="">Stolni tanlang</option>{% for n in "123456789" %}<option value="{{ forloop.counter }}">{{ forloop.counter }}-stol</option>{% endfor %}{% for n in "12345678901" %}<option value="{{ forloop.counter|add:9 }}">{{ forloop.counter|add:9 }}-stol</option>{% endfor %}</select>
+    <div id="cart-items" class="cart-items"><div class="cart-empty"><span>🥡</span><p>Savat hozircha bo‘sh</p><small>Menyudan taom tanlang</small></div></div>
+    <div class="cart-total"><span>Jami</span><strong id="cart-total">0 so‘m</strong></div>
+    <form id="order-form">
+      <label class="field-label" for="customer-name">Ismingiz (ixtiyoriy)</label><input id="customer-name" class="field" maxlength="100" placeholder="Ismingiz">
+      <label class="field-label" for="customer-phone">Telefon (ixtiyoriy)</label><input id="customer-phone" class="field" maxlength="30" type="tel" placeholder="+998 ...">
+      <label class="field-label" for="note">Izoh (ixtiyoriy)</label><textarea id="note" class="field" rows="2" maxlength="1000" placeholder="Masalan: piyozsiz"></textarea>
+      <button id="submit-order" class="button button-dark submit-order" type="submit">Buyurtma berish <span>→</span></button>
+      <p id="order-message" class="order-message" role="status"></p>
+      <small class="privacy-note">Buyurtma yuborilgach, restoran xodimlari uni Admin panelda ko‘radi.</small>
+    </form>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const cart = new Map();
+const money = n => new Intl.NumberFormat('uz-UZ').format(n) + ' so‘m';
+const cartItems = document.getElementById('cart-items');
+const cartCount = document.getElementById('cart-count');
+const cartTotal = document.getElementById('cart-total');
+function renderCart() {
+  const entries = [...cart.values()];
+  const count = entries.reduce((sum, item) => sum + item.quantity, 0);
+  const total = entries.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  cartCount.textContent = count;
+  cartTotal.textContent = money(total);
+  if (!entries.length) {
+    cartItems.innerHTML = '<div class="cart-empty"><span>🥡</span><p>Savat hozircha bo‘sh</p><small>Menyudan taom tanlang</small></div>';
+    return;
+  }
+  cartItems.innerHTML = entries.map(item => `<div class="cart-row"><div class="cart-row-main"><strong>${escapeHtml(item.name)}</strong><small>${money(item.price)}</small></div><div class="qty"><button type="button" data-action="minus" data-id="${item.id}" aria-label="Kamaytirish">−</button><span>${item.quantity}</span><button type="button" data-action="plus" data-id="${item.id}" aria-label="Ko‘paytirish">+</button></div></div>`).join('');
+}
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+}
+document.querySelectorAll('.add-btn').forEach(button => button.addEventListener('click', () => {
+  const id = Number(button.dataset.id);
+  const current = cart.get(id) || {id, name:button.dataset.name, price:Number(button.dataset.price), quantity:0};
+  if (current.quantity < 50) current.quantity += 1;
+  cart.set(id, current); renderCart();
+  button.classList.add('added'); setTimeout(() => button.classList.remove('added'), 250);
+}));
+cartItems.addEventListener('click', event => {
+  const button = event.target.closest('button[data-action]');
+  if (!button) return;
+  const item = cart.get(Number(button.dataset.id));
+  if (!item) return;
+  if (button.dataset.action === 'plus' && item.quantity < 50) item.quantity++;
+  if (button.dataset.action === 'minus') item.quantity--;
+  if (item.quantity <= 0) cart.delete(item.id);
+  renderCart();
+});
+document.getElementById('search').addEventListener('input', event => {
+  const query = event.target.value.toLowerCase().trim();
+  document.querySelectorAll('.food-card').forEach(card => {
+    card.hidden = !(card.dataset.name + ' ' + card.dataset.description).includes(query);
+  });
+  document.querySelectorAll('.category-section').forEach(section => {
+    section.hidden = ![...section.querySelectorAll('.food-card')].some(card => !card.hidden);
+  });
+});
+document.getElementById('order-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const message = document.getElementById('order-message');
+  const submit = document.getElementById('submit-order');
+  const table = document.getElementById('table-number').value;
+  if (!table) { message.textContent = 'Iltimos, stol raqamini tanlang.'; message.className = 'order-message error'; return; }
+  if (!cart.size) { message.textContent = 'Savatga kamida bitta taom qo‘shing.'; message.className = 'order-message error'; return; }
+  submit.disabled = true; submit.textContent = 'Yuborilmoqda...';
+  message.textContent = '';
+  try {
+    const response = await fetch('{% url "orders:create_order" %}', {
+      method:'POST', headers:{'Content-Type':'application/json', 'X-CSRFToken':getCookie('csrftoken')},
+      body:JSON.stringify({
+        table_number:table, items:[...cart.values()].map(({id,quantity})=>({id,quantity})),
+        customer_name:document.getElementById('customer-name').value,
+        customer_phone:document.getElementById('customer-phone').value,
+        note:document.getElementById('note').value
+      })
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error(result.error || 'Buyurtma yuborilmadi.');
+    window.location.href = result.redirect;
+  } catch (error) {
+    message.textContent = error.message || 'Internet yoki server bilan muammo. Qayta urinib ko‘ring.';
+    message.className = 'order-message error';
+    submit.disabled = false; submit.innerHTML = 'Buyurtma berish <span>→</span>';
+  }
+});
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : '';
+}
+renderCart();
+</script>
+{% endblock %}

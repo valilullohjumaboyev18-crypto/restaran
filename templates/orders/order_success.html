@@ -1,0 +1,22 @@
+{% extends "orders/base.html" %}
+{% block title %}Buyurtma qabul qilindi{% endblock %}
+{% block content %}
+<section class="success-wrap">
+  <div class="success-card">
+    <div class="success-check">✓</div><span class="eyebrow">MUVAFFAQIYATLI</span>
+    <h1>Buyurtmangiz qabul qilindi!</h1>
+    <p>Rahmat! Restoran xodimlari buyurtmangizni ko‘rib chiqadi.</p>
+    <div class="receipt">
+      <div><span>Buyurtma raqami</span><strong>#{{ order.id }}</strong></div>
+      <div><span>Stol raqami</span><strong>{{ order.table_number }}-stol</strong></div>
+      <div><span>Holati</span><strong>{{ order.get_status_display }}</strong></div>
+      <hr>
+      {% for item in order.items.all %}
+      <div><span>{{ item.item_name }} × {{ item.quantity }}</span><strong>{{ item.subtotal|floatformat:0 }} so‘m</strong></div>
+      {% endfor %}
+      <hr><div class="receipt-total"><span>Jami</span><strong>{{ order.total|floatformat:0 }} so‘m</strong></div>
+    </div>
+    <a class="button button-dark" href="{% url 'orders:menu' %}">Menyuga qaytish</a>
+  </div>
+</section>
+{% endblock %}
